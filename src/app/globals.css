@@ -1,0 +1,347 @@
+@import "tailwindcss";
+
+/* ---------- Theme tokens ---------- */
+
+:root {
+  color-scheme: light;
+  --bg: #f7f3ec;
+  --surface: #ffffff;
+  --surface-2: #efe7da;
+  --ink: #0b1b3a;
+  --ink-muted: #46506a;
+  --line: #d6cbb9;
+  --accent: #ff7a3d;
+  --accent-strong: #ff9a52;
+  --accent-ink: #a8420c;
+  --on-accent: #0b1b3a;
+  --navy: #0b1b3a;
+  --navy-2: #13284f;
+  --focus: #a8420c;
+  --seat: #dfe6f3;
+  --seat-taken: #b9b0a2;
+  --danger: #a3142b;
+  --map-sea: #e3ebf6;
+  --map-land: #f6eddd;
+  --map-coast: #cdbb9c;
+  --map-grid: #c8d4e6;
+  --map-route: #d9561f;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #070f22;
+  --surface: #0e1a33;
+  --surface-2: #15254a;
+  --ink: #eef1f8;
+  --ink-muted: #aeb8cf;
+  --line: #2a3b63;
+  --accent: #ff8a4c;
+  --accent-strong: #ffa86b;
+  --accent-ink: #ffb27c;
+  --on-accent: #0b1b3a;
+  --focus: #ffb27c;
+  --seat: #1f3364;
+  --seat-taken: #3a4560;
+  --danger: #ff8a9a;
+  --map-sea: #0a1630;
+  --map-land: #182a52;
+  --map-coast: #2f4578;
+  --map-grid: #1a2b52;
+  --map-route: #ff8a4c;
+}
+
+/* No-JS visitors still get the dark palette if their system asks for it. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #070f22;
+    --surface: #0e1a33;
+    --surface-2: #15254a;
+    --ink: #eef1f8;
+    --ink-muted: #aeb8cf;
+    --line: #2a3b63;
+    --accent: #ff8a4c;
+    --accent-strong: #ffa86b;
+    --accent-ink: #ffb27c;
+    --focus: #ffb27c;
+    --seat: #1f3364;
+    --seat-taken: #3a4560;
+    --danger: #ff8a9a;
+    --map-sea: #0a1630;
+    --map-land: #182a52;
+    --map-coast: #2f4578;
+    --map-grid: #1a2b52;
+    --map-route: #ff8a4c;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-ink: var(--accent-ink);
+  --color-on-accent: var(--on-accent);
+  --color-navy: var(--navy);
+  --color-navy-2: var(--navy-2);
+  --color-seat: var(--seat);
+  --color-seat-taken: var(--seat-taken);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+/* dark: follows the data-theme attribute set before first paint. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Only enhance layouts with motion when scripts run AND the user hasn't asked for reduced motion. */
+@custom-variant motion-ok {
+  @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+    @slot;
+  }
+}
+
+/* ---------- Base ---------- */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Elements on dark artwork keep a light ring in both themes. */
+.on-dark :focus-visible,
+.on-dark:focus-visible {
+  outline-color: #ffc59b;
+}
+
+.font-display {
+  font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
+  font-optical-sizing: auto;
+}
+
+/* ---------- Page-load intro (pure CSS, so it never blocks rendering) ---------- */
+
+.intro {
+  display: none;
+}
+
+html[data-intro="play"] .intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(120% 80% at 50% 110%, #ff7a3d33, transparent 60%), #0b1b3a;
+  color: #fff;
+  pointer-events: none;
+  animation: intro-out 0.7s cubic-bezier(0.76, 0, 0.24, 1) 1.15s forwards;
+}
+
+.intro__mark {
+  animation: intro-mark 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.intro__bar {
+  transform-origin: left;
+  animation: intro-progress 1.05s cubic-bezier(0.65, 0, 0.35, 1) 0.1s both;
+}
+
+@keyframes intro-mark {
+  from {
+    transform: translateY(12px) scale(0.92);
+    opacity: 0;
+  }
+}
+
+@keyframes intro-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes intro-out {
+  to {
+    clip-path: inset(0 0 100% 0);
+    visibility: hidden;
+  }
+}
+
+/* ---------- Headline reveal ---------- */
+
+.word-mask {
+  display: inline-block;
+  overflow: clip;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+  vertical-align: bottom;
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .word-rise {
+    display: inline-block;
+    animation: word-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--intro-delay, 0s) + var(--i, 0) * 70ms);
+  }
+
+  html[data-intro="play"] {
+    --intro-delay: 1.25s;
+  }
+
+  .fade-rise {
+    animation: fade-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--intro-delay, 0s) + var(--d, 0.35s));
+  }
+}
+
+@keyframes word-rise {
+  from {
+    transform: translateY(105%) rotate(4deg);
+  }
+}
+
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/* ---------- Scroll reveal (<Reveal> sets data-inview once visible) ---------- */
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  [data-reveal]:not([data-inview="true"]) {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+
+  [data-reveal] {
+    transition:
+      opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0s);
+  }
+}
+
+/* ---------- Route drawing (paths use pathLength="1") ---------- */
+
+.route-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  [data-inview] .route-line {
+    stroke-dashoffset: 1;
+    transition: stroke-dashoffset 1.6s cubic-bezier(0.65, 0, 0.35, 1);
+    transition-delay: calc(0.25s + var(--i, 0) * 0.22s);
+  }
+
+  [data-inview="true"] .route-line {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-plane {
+    display: none;
+  }
+}
+
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
+/* ---------- Decorative loops (all disabled for reduced motion) ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .pulse-ring {
+    animation: pulse-ring 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .drift {
+    animation: drift 9s ease-in-out infinite alternate;
+  }
+
+  .bob {
+    animation: bob 4s ease-in-out infinite;
+  }
+
+  .scroll-cue-dot {
+    animation: scroll-cue 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse-ring {
+  from {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes drift {
+  to {
+    transform: translateX(28px);
+  }
+}
+
+@keyframes bob {
+  50% {
+    transform: translateY(-10px) rotate(-3deg);
+  }
+}
+
+@keyframes scroll-cue {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Belt and braces: reduced motion kills any remaining CSS animation or transition. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
