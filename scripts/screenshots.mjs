@@ -1,5 +1,6 @@
 // Captures the README screenshots from a running server.
 // Usage: BASE_URL=http://localhost:3200 node scripts/screenshots.mjs
+// 3D shots use ?3d=1 with software WebGL (SwiftShader), so no GPU is needed.
 import { mkdir } from "node:fs/promises";
 import { chromium } from "@playwright/test";
 import sharp from "sharp";
@@ -8,7 +9,10 @@ const BASE = process.env.BASE_URL ?? "http://localhost:3200";
 const OUT = "docs/screenshots";
 await mkdir(OUT, { recursive: true });
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({
+  args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
+});
+const waitFor3d = (page) => page.waitForSelector("[data-stage='live']", { timeout: 120_000 });
 
 async function shot(
   name,
@@ -36,7 +40,13 @@ const scrollTo = (fraction) => async (page) => {
     const hero = document.querySelector('section[aria-labelledby="hero-title"]');
     window.scrollTo(0, hero.offsetTop + (hero.offsetHeight - window.innerHeight) * f);
   }, fraction);
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(3500);
+};
+const live = (fraction) => async (page) => {
+  await waitFor3d(page);
+  await scrollTo(fraction)(page);
+  // Software WebGL renders only a few frames per second; let the eased camera settle.
+  await page.waitForTimeout(6000);
 };
 
 const futureDate = (days) => {
@@ -45,9 +55,9 @@ const futureDate = (days) => {
   return d.toISOString().slice(0, 10);
 };
 
-await shot("home-dawn", { width: 1280, height: 800, path: "/" });
-await shot("home-midday", { width: 1280, height: 800, path: "/", act: scrollTo(0.3) });
-await shot("home-dusk", { width: 1280, height: 800, path: "/", act: scrollTo(0.75) });
+await shot("home-dawn", { width: 1280, height: 800, path: "/?3d=1", act: live(0) });
+await shot("home-midday", { width: 1280, height: 800, path: "/?3d=1", act: live(0.48) });
+await shot("home-dusk", { width: 1280, height: 800, path: "/?3d=1", act: live(0.9) });
 await shot("destinations-dark", {
   width: 1280,
   height: 800,
@@ -63,15 +73,36 @@ await shot("fleet-dark", {
   width: 1280,
   height: 800,
   colorScheme: "dark",
-  path: "/fleet",
+  path: "/fleet?3d=1",
   act: async (page) => {
-    await page.evaluate(() => {
-      const s = document.querySelector('section[aria-label="Three cabins, one scroll"]');
-      window.scrollTo(0, s.offsetTop + (s.offsetHeight - window.innerHeight) * 0.92);
-    });
-    await page.waitForTimeout(1500);
+    const scrollCabins = (f) =>
+      page.evaluate((f) => {
+        const s = document.querySelector('section[aria-label="Three cabins, one scroll"]');
+        window.scrollTo(0, s.offsetTop + (s.offsetHeight - window.innerHeight) * f);
+      }, f);
+    await scrollCabins(0.05);
+    await waitFor3d(page);
+    await scrollCabins(0.92);
+    // The cabin copy uses a smoothed scrub, which is slow to settle in software WebGL.
+    await page.waitForTimeout(9000);
   },
 });
+await shot("destinations-3d", {
+  width: 1280,
+  height: 800,
+  path: "/destinations?3d=1",
+  act: async (page) => {
+    await page.getByText("3D view", { exact: true }).click();
+    await waitFor3d(page);
+    await page.evaluate(() => window.scrollTo(0, 230));
+    await page
+      .getByRole("group", { name: /Route map/ })
+      .getByRole("button", { name: /Lagos/ })
+      .click();
+    await page.waitForTimeout(3500);
+  },
+});
+await shot("home-3d-mobile", { width: 375, height: 812, path: "/?3d=1", act: live(0) });
 const book = async (page, toSeats) => {
   await page.getByLabel("Departure date").fill(futureDate(30));
   await page.getByLabel("Return date").fill(futureDate(37));

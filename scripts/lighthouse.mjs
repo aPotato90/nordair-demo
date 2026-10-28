@@ -1,6 +1,8 @@
 // Runs Lighthouse (mobile + desktop) against a running production server and prints median scores.
 // Usage: npm run build && npm run start -- -p 3200 &  then  BASE_URL=http://localhost:3200 npm run lighthouse
 // Set CHROME_PATH if Chrome/Chromium isn't on the default path. RUNS controls repeats (default 3).
+// QUERY appends a query string to every URL (e.g. QUERY="?3d=1" forces the 3D scenes on);
+// ROUTES limits the pages (comma-separated). LABEL names the summary file.
 import { mkdir, writeFile } from "node:fs/promises";
 import * as chromeLauncher from "chrome-launcher";
 import lighthouse from "lighthouse";
@@ -8,7 +10,16 @@ import desktopConfig from "lighthouse/core/config/desktop-config.js";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3200";
 const RUNS = Number(process.env.RUNS ?? 3);
-const ROUTES = ["/", "/destinations", "/book", "/fleet", "/about", "/contact"];
+const ROUTES = process.env.ROUTES?.split(",") ?? [
+  "/",
+  "/destinations",
+  "/book",
+  "/fleet",
+  "/about",
+  "/contact",
+];
+const QUERY = process.env.QUERY ?? "";
+const LABEL = process.env.LABEL ?? "summary";
 const CATEGORIES = ["performance", "accessibility", "best-practices", "seo"];
 
 const median = (values) => {
@@ -16,7 +27,12 @@ const median = (values) => {
   return sorted[Math.floor(sorted.length / 2)];
 };
 
-const chrome = await chromeLauncher.launch({ chromeFlags: ["--headless=new", "--no-sandbox"] });
+// Forced 3D runs need software WebGL (SwiftShader) to render without a GPU. It is NOT used for
+// normal runs: it also moves page compositing onto software GL, which slows every page down.
+const softwareGL = QUERY.includes("3d=1") ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] : [];
+const chrome = await chromeLauncher.launch({
+  chromeFlags: ["--headless=new", "--no-sandbox", ...softwareGL],
+});
 const rows = [];
 
 try {
@@ -25,7 +41,7 @@ try {
       const runs = [];
       for (let i = 0; i < RUNS; i++) {
         const result = await lighthouse(
-          BASE + route,
+          BASE + route + QUERY,
           { port: chrome.port, output: "json", logLevel: "error", onlyCategories: CATEGORIES },
           formFactor === "desktop" ? desktopConfig : undefined,
         );
@@ -65,5 +81,8 @@ const table = [
 ].join("\n");
 
 await mkdir("lighthouse", { recursive: true });
-await writeFile("lighthouse/summary.md", `Median of ${RUNS} runs per page.\n\n${table}\n`);
+await writeFile(
+  `lighthouse/${LABEL}.md`,
+  `Median of ${RUNS} runs per page${QUERY ? ` with ${QUERY}` : ""}.\n\n${table}\n`,
+);
 console.log(`\n${table}`);

@@ -127,6 +127,9 @@ test("route map: choosing a city opens its destination card", async ({ page }) =
     "href",
     "/book?to=ACC",
   );
+  // A selected city chip and its open card must stay readable.
+  await expect.poll(() => card.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+  await expectAxeClean(page);
 
   // Keyboard: focusing another city switches the card; Escape closes it.
   await map.getByRole("button", { name: /Dubai/ }).focus();
@@ -204,10 +207,18 @@ test("motion vs reduced-motion layouts", async ({ page }, info) => {
     .locator('section[aria-labelledby="pinned-title"] > div')
     .evaluate((el) => getComputedStyle(el).position);
 
+  const heroFrame = page.locator("[data-hero-frame]");
+
   if (isReduced(info)) {
     // Static fallback: no scroll-jacked heights, no sticky pinning, no animated planes.
-    expect(heroHeight).toBeLessThan(viewport.height * 1.2);
+    expect(await heroFrame.evaluate((el) => getComputedStyle(el).position)).toBe("relative");
+    expect(heroHeight).toBeLessThan(viewport.height * 2.2);
     expect(panelsPosition).toBe("static");
+    // The hero story beats are plain, visible text.
+    for (const beat of await page.locator("[data-beat]").all()) {
+      await expect(beat).toBeVisible();
+      expect(await beat.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+    }
     await page.goto("/destinations", { waitUntil: "networkidle" });
     await expect(page.locator(".map-plane").first()).toBeHidden();
     // Every route is fully drawn without animation.
@@ -228,17 +239,17 @@ test("motion vs reduced-motion layouts", async ({ page }, info) => {
     }
   } else {
     expect(heroHeight).toBeGreaterThan(viewport.height * 2);
+    expect(await heroFrame.evaluate((el) => getComputedStyle(el).position)).toBe("sticky");
     expect(panelsPosition).toBe("sticky");
-    // Scrolling the hero moves the plane and shifts the sky towards dusk.
-    const before = await page.locator("[data-plane]").boundingBox();
-    await page.mouse.wheel(0, viewport.height * 0.8);
-    await page.waitForTimeout(1200);
-    const after = await page.locator("[data-plane]").boundingBox();
-    expect(after!.x).not.toBeCloseTo(before!.x, 0);
-    const dayOpacity = await page
-      .locator("[data-sky='day']")
-      .evaluate((el) => Number(getComputedStyle(el).opacity));
-    expect(dayOpacity).toBeGreaterThan(0);
+    // Beats start hidden and scroll into view; scroll progress drives the poster crossfade.
+    await expect(page.locator("[data-beat='0']")).toBeHidden();
+    const hero = page.locator('section[aria-labelledby="hero-title"]');
+    const travel = heroHeight - viewport.height;
+    await page.evaluate((y) => window.scrollTo(0, y), Math.round(travel * 0.45) + 92);
+    await expect(page.locator("[data-beat='0']")).toBeVisible();
+    const progress = Number(await hero.evaluate((el) => el.style.getPropertyValue("--hero-p")));
+    expect(progress).toBeGreaterThan(0.35);
+    expect(progress).toBeLessThan(0.6);
   }
 });
 
