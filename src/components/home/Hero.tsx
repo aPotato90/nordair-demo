@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { getImageProps } from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { site } from "@/content/site";
 import { Stage3D } from "@/components/three/Stage3D";
 import { MOTION_OK, useGsap, type GsapTools } from "@/lib/use-gsap";
@@ -150,14 +150,18 @@ export function Hero() {
                 className="mt-4 font-display text-5xl leading-[0.98] font-bold tracking-tight sm:text-7xl lg:text-8xl"
               >
                 {copy.headline.map((word, i) => (
-                  <span key={word} className="word-mask mr-[0.22em]">
-                    <span
-                      className={`word-rise ${word.startsWith(copy.accentWord) ? "bg-gradient-to-r from-[#ffc27a] to-[#ff8a4c] bg-clip-text text-transparent" : ""}`}
-                      style={{ ["--i" as string]: i }}
-                    >
-                      {word}
+                  <Fragment key={word}>
+                    {/* Real spaces between words, so the heading reads as words, not one long string. */}
+                    {i > 0 && " "}
+                    <span className="word-mask">
+                      <span
+                        className={`word-rise ${word.startsWith(copy.accentWord) ? "bg-gradient-to-r from-[#ffc27a] to-[#ff8a4c] bg-clip-text text-transparent" : ""}`}
+                        style={{ ["--i" as string]: i }}
+                      >
+                        {word}
+                      </span>
                     </span>
-                  </span>
+                  </Fragment>
                 ))}
               </h1>
               <p

@@ -163,7 +163,10 @@ test.describe("destinations", () => {
     await expectDecorativeCanvas(page);
     const map = page.getByRole("group", { name: /Route map/ });
     await map.getByRole("button", { name: /Dubai/ }).click();
-    await expect(page.getByRole("article", { name: "Dubai" })).toBeVisible();
+    const card = page.getByRole("article", { name: "Dubai" });
+    await expect(card).toBeVisible();
+    // Let the card's spring entrance finish before checking contrast.
+    await expect.poll(() => card.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
     await expectNoHorizontalOverflow(page);
     await expectAxeClean(page);
     await page.getByText("Flat map", { exact: true }).click();

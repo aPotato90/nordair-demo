@@ -127,6 +127,9 @@ test("route map: choosing a city opens its destination card", async ({ page }) =
     "href",
     "/book?to=ACC",
   );
+  // A selected city chip and its open card must stay readable.
+  await expect.poll(() => card.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+  await expectAxeClean(page);
 
   // Keyboard: focusing another city switches the card; Escape closes it.
   await map.getByRole("button", { name: /Dubai/ }).focus();

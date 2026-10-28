@@ -56,7 +56,7 @@ export function RouteMap({ fares }: { fares: Record<AirportCode, number> }) {
         }`}
       >
         <span>{a.city}</span>
-        <span className="hidden opacity-70 sm:inline">{a.code}</span>
+        <span className={`hidden sm:inline ${selected ? "" : "text-ink-muted"}`}>{a.code}</span>
       </button>
     );
   };
