@@ -14,7 +14,12 @@ const capableDesktop: Environment3D = {
 
 describe("decideTier", () => {
   it("loads 3D after idle on a capable desktop", () => {
-    expect(decideTier(capableDesktop)).toEqual({ tier: "idle", reason: "capable", forced: false });
+    expect(decideTier(capableDesktop)).toEqual({
+      tier: "idle",
+      reason: "capable",
+      forced: false,
+      confirmed: true,
+    });
   });
 
   it("waits for intent on small or touch screens", () => {
@@ -37,7 +42,12 @@ describe("decideTier", () => {
       { webgl: { supported: true, renderer: "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device))" } },
     ],
   ] as const)("falls back to the poster for %s", (reason, override) => {
-    expect(decideTier({ ...capableDesktop, ...override })).toEqual({ tier: "off", reason, forced: false });
+    expect(decideTier({ ...capableDesktop, ...override })).toEqual({
+      tier: "off",
+      reason,
+      forced: false,
+      confirmed: true,
+    });
   });
 
   it("?3d=1 overrides device heuristics and small-screen gating", () => {
@@ -50,6 +60,7 @@ describe("decideTier", () => {
         tier: "idle",
         reason: "forced",
         forced: true,
+        confirmed: true,
       });
     }
   });
@@ -60,5 +71,38 @@ describe("decideTier", () => {
     expect(
       decideTier({ ...capableDesktop, param: "1", webgl: { supported: false, renderer: "" } }).tier,
     ).toBe("off");
+  });
+
+  describe("before WebGL is probed (webgl: null)", () => {
+    const unprobed = { ...capableDesktop, webgl: null };
+
+    it("gives a provisional, unconfirmed decision from cheap signals", () => {
+      expect(decideTier(unprobed)).toEqual({
+        tier: "idle",
+        reason: "capable",
+        forced: false,
+        confirmed: false,
+      });
+      expect(decideTier({ ...unprobed, smallScreen: true })).toMatchObject({
+        tier: "intent",
+        confirmed: false,
+      });
+      expect(decideTier({ ...unprobed, param: "1" })).toMatchObject({
+        tier: "idle",
+        forced: true,
+        confirmed: false,
+      });
+    });
+
+    it("already rules out devices that never need the probe", () => {
+      for (const override of [
+        { reducedMotion: true },
+        { saveData: true },
+        { deviceMemory: 1 },
+        { param: "0" },
+      ]) {
+        expect(decideTier({ ...unprobed, ...override })).toMatchObject({ tier: "off", confirmed: true });
+      }
+    });
   });
 });

@@ -27,9 +27,11 @@ const median = (values) => {
   return sorted[Math.floor(sorted.length / 2)];
 };
 
-// Software WebGL (SwiftShader) so forced 3D runs can render without a GPU.
+// Forced 3D runs need software WebGL (SwiftShader) to render without a GPU. It is NOT used for
+// normal runs: it also moves page compositing onto software GL, which slows every page down.
+const softwareGL = QUERY.includes("3d=1") ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] : [];
 const chrome = await chromeLauncher.launch({
-  chromeFlags: ["--headless=new", "--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+  chromeFlags: ["--headless=new", "--no-sandbox", ...softwareGL],
 });
 const rows = [];
 

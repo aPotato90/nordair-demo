@@ -98,14 +98,20 @@ test.describe("fallbacks to the poster", () => {
       if (c.init) await page.addInitScript(c.init);
       await page.goto(c.url, { waitUntil: "networkidle" });
       const stage = page.locator("[data-stage]").first();
-      // Reduced motion always wins, whatever else is going on.
-      await expect(stage).toHaveAttribute("data-stage-reason", isReduced(info) ? "reduced-motion" : c.reason);
-      await expect(stage).toHaveAttribute("data-stage", "poster");
-      await expect(stage.locator("canvas")).toHaveCount(0);
       await expect(page.locator("[data-hero-frame] img").first()).toBeVisible();
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-      // Scroll a little: intent never upgrades a poster-only device.
+      // Scroll a little: this is the moment a phone would load 3D ("intent"), and
+      // the point where WebGL is probed. A poster-only device must stay on the poster.
       await page.mouse.wheel(0, 400);
+      // Reduced motion always wins, whatever else is going on.
+      await expect(stage).toHaveAttribute(
+        "data-stage-reason",
+        isReduced(info) ? "reduced-motion" : c.reason,
+        {
+          timeout: 10_000,
+        },
+      );
+      await expect(stage).toHaveAttribute("data-stage", "poster");
       await page.waitForTimeout(800);
       await expect(stage.locator("canvas")).toHaveCount(0);
       // three.js is never fetched on the poster path.
@@ -175,7 +181,26 @@ test.describe("destinations", () => {
     expect(errors).toEqual([]);
   });
 
-  test("the 3D toggle is not offered when 3D is unavailable", async ({ page }) => {
+  test("without usable WebGL, picking 3D view explains why and keeps the flat map", async ({
+    page,
+  }, info) => {
+    test.skip(isReduced(info), "the toggle is never offered under reduced motion");
+    // Default headless Chromium only has a software GPU, which counts as unavailable.
+    await page.goto("/destinations", { waitUntil: "networkidle" });
+    await page.getByText("3D view", { exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: "3D isn't available" })).toBeVisible();
+    await expect(page.locator("[data-stage]")).toHaveCount(0);
+    await expect(page.locator("canvas")).toHaveCount(0);
+    await expect(
+      page.getByRole("group", { name: /Route map/ }).getByRole("button", { name: /Lagos/ }),
+    ).toBeVisible();
+    await expectAxeClean(page);
+  });
+
+  test("the 3D toggle is not offered with Save-Data or reduced motion", async ({ page }) => {
+    await page.addInitScript(() =>
+      Object.defineProperty(navigator, "connection", { value: { saveData: true } }),
+    );
     await page.goto("/destinations", { waitUntil: "networkidle" });
     await expect(page.getByText("3D view", { exact: true })).toHaveCount(0);
     await expect(

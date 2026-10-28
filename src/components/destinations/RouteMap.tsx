@@ -37,6 +37,10 @@ export function RouteMap({ fares }: { fares: Record<AirportCode, number> }) {
   const [stage, setStage] = useState<StageState>("poster");
   const onStageChange = useCallback((state: StageState) => setStage(state), []);
   const show3d = can3d && view === "3d";
+  // WebGL is only probed once "3D view" is picked; if it turns out to be unavailable, the
+  // toggle stays (with an explanation) so the choice doesn't silently vanish.
+  const offerToggle = can3d || (view === "3d" && !!capability);
+  const unavailable = view === "3d" && (!can3d || stage === "fallback");
 
   const cityButton = (code: AirportCode, className: string, style?: CSSProperties) => {
     const a = airportByCode(code);
@@ -69,7 +73,7 @@ export function RouteMap({ fares }: { fares: Record<AirportCode, number> }) {
       }}
     >
       <div>
-        {can3d && (
+        {offerToggle && (
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <Segmented
               legend={copy.viewLabel}
@@ -83,11 +87,7 @@ export function RouteMap({ fares }: { fares: Record<AirportCode, number> }) {
               ]}
             />
             <p role="status" className="text-sm text-ink-muted">
-              {show3d && stage === "loading"
-                ? copy.loading3d
-                : show3d && stage === "fallback"
-                  ? copy.fallback3d
-                  : ""}
+              {unavailable ? copy.fallback3d : show3d && stage === "loading" ? copy.loading3d : ""}
             </p>
           </div>
         )}
