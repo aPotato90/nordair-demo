@@ -123,7 +123,7 @@ const CAMERA_PATH = new THREE.CatmullRomCurve3(
     new THREE.Vector3(18, -9, 42), // under the wing
     new THREE.Vector3(-4, 5, 62), // midday: full side profile
     new THREE.Vector3(-34, 16, 32), // over the tail
-    new THREE.Vector3(-54, 13, -30), // dusk: rear three-quarter, jet heading for the horizon
+    new THREE.Vector3(-60, 10, 18), // dusk: rear three-quarter (port side), jet heading for the horizon
   ],
   false,
   "centripetal",

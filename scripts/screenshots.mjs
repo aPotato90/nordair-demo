@@ -45,6 +45,8 @@ const scrollTo = (fraction) => async (page) => {
 const live = (fraction) => async (page) => {
   await waitFor3d(page);
   await scrollTo(fraction)(page);
+  // Software WebGL renders only a few frames per second; let the eased camera settle.
+  await page.waitForTimeout(6000);
 };
 
 const futureDate = (days) => {
@@ -81,7 +83,8 @@ await shot("fleet-dark", {
     await scrollCabins(0.05);
     await waitFor3d(page);
     await scrollCabins(0.92);
-    await page.waitForTimeout(3500);
+    // The cabin copy uses a smoothed scrub, which is slow to settle in software WebGL.
+    await page.waitForTimeout(9000);
   },
 });
 await shot("destinations-3d", {
