@@ -6,13 +6,18 @@
 > real company.
 
 A motion-heavy marketing site and demo booking flow built to show front-end animation craft:
-scroll-scrubbed timelines, self-drawing SVG routes, layout transitions and an animated seat map —
-all with clean static fallbacks for `prefers-reduced-motion`, full keyboard support and WCAG 2.2 AA
-checks in CI.
+a scroll-choreographed 3D hero (a fictional jet built entirely in code), a 3D cabin cutaway and 3D
+route view, scroll-scrubbed timelines, self-drawing SVG routes, layout transitions and an animated
+seat map — all with static poster fallbacks for `prefers-reduced-motion`, Save-Data, weak devices
+and no-WebGL, full keyboard support and WCAG 2.2 AA checks in CI.
 
-| Dawn                                            | Midday                                              | Dusk                                            |
+| Dawn (3D)                                       | Midday (3D)                                         | Dusk (3D)                                       |
 | ----------------------------------------------- | --------------------------------------------------- | ----------------------------------------------- |
 | ![Hero at dawn](docs/screenshots/home-dawn.jpg) | ![Hero at midday](docs/screenshots/home-midday.jpg) | ![Hero at dusk](docs/screenshots/home-dusk.jpg) |
+
+| 3D route view                                          | 3D hero on a phone                                       |
+| ------------------------------------------------------ | -------------------------------------------------------- |
+| ![3D route view](docs/screenshots/destinations-3d.jpg) | ![3D hero at 375px](docs/screenshots/home-3d-mobile.jpg) |
 
 | Route map (dark)                                                  | Cabin sequence (dark)                                    | Demo results                                         |
 | ----------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------- |
@@ -24,17 +29,20 @@ checks in CI.
 
 ## What's inside
 
-- **Home** — a CSS-only page-load intro (logo + progress bar, once per session); a hero where a
-  plane flies a curved path while the sky shifts dawn → midday → dusk as you scroll; a headline
-  word-by-word reveal; scroll-pinned horizontal panels; count-up stats.
+- **Home** — a CSS-only page-load intro (logo + progress bar, once per session); a 3D hero where
+  the camera circles the fictional **Kestrel 500** jet as you scroll while the light shifts
+  dawn → midday → dusk (nav lights and cabin windows glow at dusk); story beats as real HTML; a
+  headline word-by-word reveal; scroll-pinned horizontal panels; count-up stats.
 - **Destinations** — an SVG route map (stylised, hand-simplified coastlines) where flight paths
-  between Port Harcourt, Lagos, Accra, London and Dubai draw themselves; hover, tap or tab to a city
-  to open an animated destination card; a static list of every destination below.
+  between Port Harcourt, Lagos, Accra, London and Dubai draw themselves; an opt-in **3D view**
+  (tilted map, arcing flight paths, pins) that shares state with the city buttons; hover, tap or tab
+  to a city to open an animated destination card; a static list of every destination below.
 - **Book (demo)** — Zod + React Hook Form search with inline errors, a fake "search", results with
   sortable layout animations, an animated seat map with roving-tabindex arrow-key navigation, and a
   boarding-pass style summary. Clearly marked "demo, no real booking".
-- **Fleet & cabins** — a pinned scroll sequence where the cabin rebuilds itself from Economy (3-3)
-  to Comfort+ (2-3-2) to Nord Suite (1-2-1).
+- **Fleet & cabins** — a pinned scroll sequence where a **3D cabin cutaway** rebuilds itself from
+  Economy (3-3) to Comfort+ (2-3-2) to Nord Suite (1-2-1), with instanced seats rippling down the
+  aisle and mood lighting per cabin; the SVG version is the fallback.
 - **About**, **Contact** (validates, then clears; nothing is sent), a full-screen animated mobile
   menu, an animated 404, light/dark themes with a circular view-transition reveal.
 - **SEO** — per-page metadata and canonical URLs, generated Open Graph image, `sitemap.xml`,
@@ -43,11 +51,8 @@ checks in CI.
 ## Stack
 
 Next.js 16 (App Router, Cache Components, all routes statically prerendered) · TypeScript ·
-Tailwind CSS 4 · Motion (`motion/react`) · GSAP + ScrollTrigger · Zod + React Hook Form ·
-Vitest · Playwright + axe-core · Lighthouse.
-
-Three.js was deliberately **not** added: nothing here needed real 3D, and it would have been the
-single heaviest dependency.
+Tailwind CSS 4 · Motion (`motion/react`) · GSAP + ScrollTrigger · three.js + React Three Fiber +
+drei (lazy-loaded) · Zod + React Hook Form · Vitest · Playwright + axe-core · Lighthouse.
 
 ## Getting started
 
@@ -68,6 +73,8 @@ BASE_URL=http://localhost:3200 npm run lighthouse   # set CHROME_PATH if needed
 ```
 
 `npm run generate:art` regenerates the destination illustrations.
+`BASE_URL=http://localhost:3200 npm run render:posters` re-renders the hero posters from the 3D scene.
+`npm run bundle:report` prints initial and lazy (3D) JS sizes from the last build.
 `BASE_URL=http://localhost:3200 node scripts/screenshots.mjs` regenerates the screenshots above
 from a running server.
 
@@ -100,6 +107,31 @@ that variant, so reduced-motion and no-JS visitors get a normal, static page: th
 mid-sky, every route is already drawn and the cabins become a list. All content is real text in the
 DOM; animation only changes how it arrives.
 
+**3D, only where it helps.** [`Stage3D`](src/components/three/Stage3D.tsx) always renders a static
+poster first (the hero posters are rendered from the real scene by
+[`scripts/render-posters.mjs`](scripts/render-posters.mjs)). A pure, unit-tested decision table in
+[`capability.ts`](src/lib/three/capability.ts) then decides whether the scene may load:
+
+| Visitor                                                                                         | What happens                                                 |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Reduced motion, Save-Data, 2G, no WebGL, ≤ 2 GB RAM / ≤ 2 cores, software-rendered GPU, `?3d=0` | Poster only; three.js is never downloaded                    |
+| Small screens and touch devices                                                                 | Poster, then 3D on the first scroll/tap/key press            |
+| Capable desktops                                                                                | Poster, then 3D after first paint once the browser is idle   |
+| `?3d=1` (testing/audits)                                                                        | Forces 3D, except for reduced motion, Save-Data and no WebGL |
+
+At runtime a frame-time guard drops the pixel ratio, then restores the poster if the frame rate
+stays below ~24 fps; a lost WebGL context also restores the poster; rendering pauses when the scene
+is off-screen or the tab is hidden. Canvases are `aria-hidden` — every word stays in normal HTML.
+
+**The Kestrel 500 is built in code** ([`src/components/three/aircraft`](src/components/three/aircraft)):
+NACA 4-digit airfoil sections lofted into tapered, swept wings with dihedral and washout, canted
+winglets, airfoil tail surfaces, a lathed fuselage with an upswept tail, nacelles with spinning fan
+faces, flap-track fairings and nav lights. The livery (navy belly, sunrise cheatline, wing-mark on the
+fin, NORDAIR wordmark), panel-line bump maps and dusk window glow are painted on canvases at runtime,
+so there are **no model or texture downloads** and nothing copied from a real airline. Materials are
+physically based (clear-coat paint, brushed metal) lit by drei `Lightformer` panels instead of an
+HDRI, with a shader sky, a cloud sea and city lights.
+
 **Deterministic fake data.** [`src/lib/search.ts`](src/lib/search.ts) validates searches (Zod) and
 generates flights with a seeded PRNG, real great-circle distances and fixed UTC offsets for local
 arrival times; connections route through the Lagos hub.
@@ -121,6 +153,11 @@ flow (validation, keyboard seat selection, no non-GET requests), the route map, 
 (focus and Escape), theme persistence, the contact form, the intro, reduced-motion layouts and SEO
 files.
 
+The 3D tests (`tests/e2e/three.spec.ts`) force the scenes on with `?3d=1` in software WebGL and
+check the canvas is decorative and the text is intact, plus every fallback: no WebGL, Save-Data,
+weak device, software GPU, `?3d=0`, reduced motion and a lost WebGL context — asserting the poster
+stays and three.js is never downloaded.
+
 Lighthouse results (median of 3 runs, local production build) are in the pull request description.
 
 ## Project structure
@@ -130,8 +167,9 @@ src/
   app/                 routes, metadata files (sitemap, robots, OG image, icon), globals.css
   components/          brand, layout (header, menu, theme), home, destinations, book, fleet, contact, ui
   content/             site.ts (all copy), airports.ts (destination data)
-  lib/                 search, pricing, seats, geo, map geometry, metadata, useGsap
+  components/three/    Stage3D loader, SceneCanvas, hero / cabin / route scenes, aircraft builder
+  lib/                 search, pricing, seats, geo, map geometry, metadata, useGsap, three/capability
 tests/unit/            Vitest
 tests/e2e/             Playwright + axe-core
-scripts/               art generation, screenshots, Lighthouse
+scripts/               art generation, poster rendering, screenshots, bundle report, Lighthouse
 ```

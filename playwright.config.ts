@@ -9,7 +9,13 @@ const sizes = {
   desktop: { width: 1280, height: 800 },
 } as const;
 
-const chromium = devices["Desktop Chrome"];
+// Software WebGL (SwiftShader) so the 3D scenes can render in headless Chromium without a GPU.
+const chromium = {
+  ...devices["Desktop Chrome"],
+  launchOptions: {
+    args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
+  },
+};
 
 export default defineConfig({
   testDir: "./tests/e2e",

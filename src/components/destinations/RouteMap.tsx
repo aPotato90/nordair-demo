@@ -3,15 +3,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, m } from "motion/react";
-import { useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useState, type CSSProperties } from "react";
 import { airportByCode, type AirportCode } from "@/content/airports";
 import { site } from "@/content/site";
 import { cityPoints, connectionsFor } from "@/lib/map-geometry";
 import { formatMoney } from "@/lib/pricing";
+import { Stage3D, useCapability, type StageState } from "@/components/three/Stage3D";
 import { Reveal } from "@/components/ui/Reveal";
+import { Segmented } from "@/components/ui/Segmented";
 import { MapArt } from "./MapArt";
 
 const copy = site.destinations;
+
+// Downloads only after the visitor picks "3D view".
+const RouteScene = dynamic(() => import("@/components/three/RouteScene"), { ssr: false });
 
 /** Where each city's label sits relative to its dot, so close cities never overlap. */
 const LABEL_PLACEMENT: Record<AirportCode, string> = {
@@ -25,6 +31,35 @@ const LABEL_PLACEMENT: Record<AirportCode, string> = {
 export function RouteMap({ fares }: { fares: Record<AirportCode, number> }) {
   const [active, setActive] = useState<AirportCode | null>(null);
   const airport = active ? airportByCode(active) : null;
+  const capability = useCapability();
+  const can3d = !!capability && capability.tier !== "off";
+  const [view, setView] = useState<"map" | "3d">("map");
+  const [stage, setStage] = useState<StageState>("poster");
+  const onStageChange = useCallback((state: StageState) => setStage(state), []);
+  const show3d = can3d && view === "3d";
+
+  const cityButton = (code: AirportCode, className: string, style?: CSSProperties) => {
+    const a = airportByCode(code);
+    const selected = active === code;
+    return (
+      <button
+        key={code}
+        type="button"
+        aria-pressed={selected}
+        aria-controls="destination-card"
+        onMouseEnter={() => setActive(code)}
+        onFocus={() => setActive(code)}
+        onClick={() => setActive(code)}
+        style={style}
+        className={`flex min-h-6 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-none font-semibold whitespace-nowrap shadow-sm transition-[background-color,color,scale] duration-200 hover:scale-105 sm:min-h-8 sm:px-3 sm:text-sm ${className} ${
+          selected ? "border-transparent bg-accent text-on-accent" : "border-line bg-surface/95 text-ink"
+        }`}
+      >
+        <span>{a.city}</span>
+        <span className="hidden opacity-70 sm:inline">{a.code}</span>
+      </button>
+    );
+  };
 
   return (
     <div
@@ -33,35 +68,58 @@ export function RouteMap({ fares }: { fares: Record<AirportCode, number> }) {
         if (event.key === "Escape") setActive(null);
       }}
     >
-      <Reveal className="relative overflow-hidden rounded-3xl border border-line shadow-sm">
-        <MapArt active={active} className="block h-auto w-full" />
-        <div role="group" aria-label={copy.mapLabel} className="absolute inset-0">
-          {cityPoints.map((city) => {
-            const a = airportByCode(city.code);
-            const selected = active === city.code;
-            return (
-              <button
-                key={city.code}
-                type="button"
-                aria-pressed={selected}
-                aria-controls="destination-card"
-                onMouseEnter={() => setActive(city.code)}
-                onFocus={() => setActive(city.code)}
-                onClick={() => setActive(city.code)}
-                style={{ left: `${city.left}%`, top: `${city.top}%` }}
-                className={`absolute flex min-h-6 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-none font-semibold whitespace-nowrap shadow-sm transition-[background-color,color,scale] duration-200 hover:scale-105 sm:min-h-8 sm:px-3 sm:text-sm ${LABEL_PLACEMENT[city.code]} ${
-                  selected
-                    ? "border-transparent bg-accent text-on-accent"
-                    : "border-line bg-surface/95 text-ink"
-                }`}
-              >
-                <span>{a.city}</span>
-                <span className="hidden opacity-70 sm:inline">{a.code}</span>
-              </button>
-            );
-          })}
-        </div>
-      </Reveal>
+      <div>
+        {can3d && (
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <Segmented
+              legend={copy.viewLabel}
+              name="map-view"
+              value={view}
+              onChange={setView}
+              visuallyHiddenLegend
+              options={[
+                { value: "map", label: copy.viewFlat },
+                { value: "3d", label: copy.view3d },
+              ]}
+            />
+            <p role="status" className="text-sm text-ink-muted">
+              {show3d && stage === "loading"
+                ? copy.loading3d
+                : show3d && stage === "fallback"
+                  ? copy.fallback3d
+                  : ""}
+            </p>
+          </div>
+        )}
+        <Reveal className="relative overflow-hidden rounded-3xl border border-line bg-[var(--map-sea)] shadow-sm">
+          {show3d ? (
+            <Stage3D
+              scene={RouteScene}
+              sceneProps={{ active }}
+              poster={<MapArt active={active} className="block h-auto w-full" />}
+              autoload={false}
+              active
+              onStateChange={onStageChange}
+            />
+          ) : (
+            <MapArt active={active} className="block h-auto w-full" />
+          )}
+          <div role="group" aria-label={copy.mapLabel} className="absolute inset-0">
+            {show3d ? (
+              <div className="absolute inset-x-3 bottom-3 flex flex-wrap justify-center gap-2">
+                {cityPoints.map((city) => cityButton(city.code, ""))}
+              </div>
+            ) : (
+              cityPoints.map((city) =>
+                cityButton(city.code, `absolute ${LABEL_PLACEMENT[city.code]}`, {
+                  left: `${city.left}%`,
+                  top: `${city.top}%`,
+                }),
+              )
+            )}
+          </div>
+        </Reveal>
+      </div>
 
       <div id="destination-card" className="lg:sticky lg:top-24">
         <p className="sr-only" aria-live="polite">

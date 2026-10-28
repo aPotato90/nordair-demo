@@ -1,11 +1,19 @@
 "use client";
 
-import { useRef } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useRef, useState } from "react";
 import { site } from "@/content/site";
+import { Stage3D, type StageState } from "@/components/three/Stage3D";
 import { CABIN_LAYOUT } from "@/lib/seats";
 import { MOTION_OK, useGsap, type GsapTools } from "@/lib/use-gsap";
 
 const copy = site.fleet;
+
+// The 3D cutaway only downloads when the stage decides to mount it.
+const CabinScene = dynamic(() => import("@/components/three/CabinScene"), { ssr: false });
+/** Scroll progress shared with the 3D cabin. */
+const cabinProgress = { value: 0 };
+const sceneProps = { progress: cabinProgress };
 type CabinId = (typeof copy.cabins)[number]["id"];
 
 /** Cabin "mood lighting" per class, used for the backdrop and seat colours. */
@@ -112,6 +120,7 @@ function setupCabins({ gsap, mm, root }: GsapTools) {
         end: "bottom bottom",
         scrub: 0.6,
         onUpdate: (self) => {
+          cabinProgress.value = self.progress;
           const index = Math.min(panels.length - 1, Math.round(self.progress * (panels.length - 1)));
           counter.textContent = String(index + 1);
           dots.forEach((dot, i) => dot.classList.toggle("is-active", i === index));
@@ -154,21 +163,42 @@ function setupCabins({ gsap, mm, root }: GsapTools) {
     });
     // Hold on the last cabin for a moment before releasing.
     tl.to({}, { duration: 0.35 });
+    return () => {
+      cabinProgress.value = 0;
+    };
   });
 }
 
 export function CabinSequence() {
   const ref = useRef<HTMLElement>(null);
   useGsap(ref, setupCabins);
+  const [stage, setStage] = useState<StageState>("poster");
+  const onStageChange = useCallback((state: StageState) => setStage(state), []);
 
   return (
-    <section ref={ref} aria-label={copy.title} className="relative motion-ok:h-[380vh]">
+    <section
+      ref={ref}
+      aria-label={copy.title}
+      data-cabin-3d={stage}
+      className="group/cabins relative motion-ok:h-[380vh]"
+    >
       <div className="on-dark relative overflow-hidden bg-navy text-white motion-ok:sticky motion-ok:top-16 motion-ok:h-[calc(100svh-4rem)] motion-ok:min-h-[36rem]">
         <div
           data-glow
           aria-hidden="true"
           className="absolute -top-1/3 left-1/2 h-[120%] w-[120%] -translate-x-1/2 rounded-full bg-[#7fb2ff] opacity-20 blur-3xl"
         />
+
+        {/* 3D cutaway over the art column; the SVG cabins below remain the fallback. */}
+        <div className="pointer-events-none absolute inset-x-4 bottom-4 hidden h-[42%] overflow-hidden rounded-3xl sm:inset-x-6 md:inset-y-8 md:right-6 md:left-1/2 md:h-auto motion-ok:block">
+          <Stage3D
+            scene={CabinScene}
+            sceneProps={sceneProps}
+            poster={null}
+            className="h-full w-full"
+            onStateChange={onStageChange}
+          />
+        </div>
 
         <div className="relative mx-auto h-full max-w-7xl px-4 sm:px-6">
           <ol className="divide-y divide-white/10 motion-ok:divide-y-0">
@@ -202,7 +232,7 @@ export function CabinSequence() {
                     ))}
                   </ul>
                 </div>
-                <div className="flex justify-center">
+                <div className="flex justify-center transition-opacity duration-700 group-data-[cabin-3d=live]/cabins:opacity-0">
                   <CabinArt id={cabin.id} />
                 </div>
               </li>

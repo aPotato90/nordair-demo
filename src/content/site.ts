@@ -54,10 +54,24 @@ export const site = {
         "A fictional airline demo: scroll from dawn to dusk with a plane, explore animated routes and try a demo booking flow.",
     },
     hero: {
-      eyebrow: "Fictional airline · motion demo",
+      eyebrow: "Fictional airline · 3D motion demo",
       headline: ["Fly", "into", "the", "golden", "hour."],
       accentWord: "golden",
-      body: "Nordair is an imaginary airline that only flies at sunrise and sunset. Scroll to follow a flight from dawn to dusk.",
+      body: "Nordair is an imaginary airline that only flies at sunrise and sunset. Scroll and the camera circles our jet from first light to last light.",
+      beats: [
+        {
+          eyebrow: "01 · The aircraft",
+          title: "Meet the Kestrel 500",
+          body: "A fictional twinjet built entirely in code: clear-coat paint, brushed metal and a sunrise cheatline. Every pixel is original.",
+        },
+        {
+          eyebrow: "02 · Dusk arrival",
+          title: "Land as the city lights come on",
+          body: "The sky cools to violet, the nav lights glow and the jet banks for home. Nothing here is a real flight.",
+        },
+      ],
+      posterAlt:
+        "Rendered illustration of the fictional Nordair Kestrel 500 jet, white with a navy belly and an orange stripe, flying above clouds at dawn",
       primaryCta: "Search demo flights",
       secondaryCta: "Explore routes",
       scrollCue: "Scroll to fly",
@@ -123,6 +137,11 @@ export const site = {
     intro:
       "Hover, tap or tab to a city to open its card. Routes are drawn between our five demo destinations.",
     mapLabel: "Route map showing flight paths between Port Harcourt, Lagos, Accra, London and Dubai",
+    viewLabel: "Map view",
+    viewFlat: "Flat map",
+    view3d: "3D view",
+    loading3d: "Loading the 3D view…",
+    fallback3d: "3D isn't available on this device, so the flat map is shown.",
     cardClose: "Close card",
     cardFlightsFrom: "Demo routes",
     cardBestTime: "Best time to visit",

@@ -13,16 +13,21 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "generate:art": "node scripts/generate-art.mjs",
+    "render:posters": "node scripts/render-posters.mjs",
+    "bundle:report": "node scripts/bundle-report.mjs",
     "lighthouse": "node scripts/lighthouse.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.2",
+    "@react-three/drei": "10.7.9",
+    "@react-three/fiber": "9.8.2",
     "gsap": "^3.15.0",
     "motion": "^14.4.0",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-hook-form": "^7.90.0",
+    "three": "0.186.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -32,6 +37,7 @@
     "@types/node": "^22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.186.0",
     "chrome-launcher": "^1.2.2",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
