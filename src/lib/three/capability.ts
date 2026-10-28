@@ -67,7 +67,9 @@ function probeWebGL(): { supported: boolean; renderer: string } {
     const gl = (canvas.getContext("webgl2") ?? canvas.getContext("webgl")) as WebGLRenderingContext | null;
     if (!gl) return { supported: false, renderer: "" };
     const info = gl.getExtension("WEBGL_debug_renderer_info");
-    const renderer = String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    const renderer = String(
+      info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
+    );
     gl.getExtension("WEBGL_lose_context")?.loseContext();
     return { supported: true, renderer };
   } catch {
