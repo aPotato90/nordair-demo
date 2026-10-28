@@ -73,24 +73,27 @@ export function RouteMap({ fares }: { fares: Record<AirportCode, number> }) {
       }}
     >
       <div>
-        {offerToggle && (
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <Segmented
-              legend={copy.viewLabel}
-              name="map-view"
-              value={view}
-              onChange={setView}
-              visuallyHiddenLegend
-              options={[
-                { value: "map", label: copy.viewFlat },
-                { value: "3d", label: copy.view3d },
-              ]}
-            />
-            <p role="status" className="text-sm text-ink-muted">
-              {unavailable ? copy.fallback3d : show3d && stage === "loading" ? copy.loading3d : ""}
-            </p>
-          </div>
-        )}
+        {/* Space is reserved so the toggle appearing after hydration never shifts the map. */}
+        <div className="mb-4 flex min-h-12 flex-wrap items-center gap-3">
+          {offerToggle && (
+            <>
+              <Segmented
+                legend={copy.viewLabel}
+                name="map-view"
+                value={view}
+                onChange={setView}
+                visuallyHiddenLegend
+                options={[
+                  { value: "map", label: copy.viewFlat },
+                  { value: "3d", label: copy.view3d },
+                ]}
+              />
+              <p role="status" className="text-sm text-ink-muted">
+                {unavailable ? copy.fallback3d : show3d && stage === "loading" ? copy.loading3d : ""}
+              </p>
+            </>
+          )}
+        </div>
         <Reveal className="relative overflow-hidden rounded-3xl border border-line bg-[var(--map-sea)] shadow-sm">
           {show3d ? (
             <Stage3D
